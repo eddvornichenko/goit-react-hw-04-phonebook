@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 import s from './App.module.css';
 import Contacts from './Contacts/Contacts';
@@ -6,86 +6,57 @@ import Phonebook from './Phonebook/Phonebook';
 import Section from './Section/Section';
 import Filter from './Filter/Filter';
 
-export default class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export default function App() {
+  const [contacts, setContacts] = useState([]);
+  const [filter, setFilter] = useState('');
 
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
-
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts });
+  useEffect(() => {
+    const storedContacts = JSON.parse(localStorage.getItem('contacts'));
+    if (storedContacts) {
+      setContacts(storedContacts);
     }
-  }
+  }, []);
 
-  componentDidUpdate(_, prevState) {
-    const nextContacts = this.state.contacts;
-    const prevContacts = prevState.contacts;
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-    if (nextContacts !== prevContacts) {
-      localStorage.setItem('contacts', JSON.stringify(nextContacts));
-    }
-  }
-
-
-  phonebookValue = (text, number) => {
-    const { contacts } = this.state;
-
-    const contact = {
-      id: nanoid(),
-      name: text,
-      number,
-    };
-
-    if (contacts.map(e => e.name.toLowerCase()).includes(text.toLowerCase())) {
-      return alert(`${text} is already in contacts`);
-    }
-    if (text !== '' && number !== '') {
-      this.setState(prevState => {
-        return {
-          contacts: [...prevState.contacts, contact],
-        };
-      });
-    } else {
-      return alert('Fill in all the fields');
-    }
-  };
-
-  contactFilter = e => {
-    this.setState({ filter: e.target.value });
-  };
-  visibleContact = () => {
-    const { contacts, filter } = this.state;
-    return contacts.filter(e =>
-      e.name.toLowerCase().includes(filter.toLowerCase()),
-    );
-  };
-
-  deleteList = e => {
-    this.setState(prevState => {
-      return {
-        contacts: prevState.contacts.filter(contact => contact.id !== e),
+  const phonebookValue = (text, number) => {
+    if (contacts.some((contact) => contact.name.toLowerCase() === text.toLowerCase())) {
+      alert(`${text} is already in contacts`);
+    } else if (text !== '' && number !== '') {
+      const newContact = {
+        id: nanoid(),
+        name: text,
+        number,
       };
-    });
+      setContacts((prevContacts) => [...prevContacts, newContact]);
+    } else {
+      alert('Fill in all the fields');
+    }
   };
 
-  render() {
-    return (
-      <div className={s.App}>
-        <Section title="Phonebook">
-          <Phonebook phonebookValue={this.phonebookValue} />
-        </Section>
-        <Section title="Contacts">
-          <Filter filter={this.contactFilter} />
-          <Contacts
-            contacts={this.visibleContact()}
-            deleteList={this.deleteList}
-          />
-        </Section>
-      </div>
-    );
-  }
+  const contactFilter = (e) => {
+    setFilter(e.target.value);
+  };
+
+  const visibleContacts = contacts.filter((contact) =>
+    contact.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const deleteContact = (id) => {
+    setContacts((prevContacts) => prevContacts.filter((contact) => contact.id !== id));
+  };
+
+  return (
+    <div className={s.App}>
+      <Section title="Phonebook">
+        <Phonebook phonebookValue={phonebookValue} />
+      </Section>
+      <Section title="Contacts">
+        <Filter filter={contactFilter} />
+        <Contacts contacts={visibleContacts} deleteList={deleteContact} />
+      </Section>
+    </div>
+  );
 }
